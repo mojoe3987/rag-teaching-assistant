@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teaching Assistant</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    #chat-container, #upload-container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    #messages {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      background: #f9f9f9;
+      border-radius: 5px;
+    }
+    .message {
+      margin: 10px 0;
+    }
+    .user {
+      font-weight: bold;
+      color: #333;
+    }
+    .bot {
+      font-style: italic;
+      color: #007BFF;
+    }
+    #input-container {
+      display: flex;
+      gap: 10px;
+    }
+    #query {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      background: #007BFF;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+  <script>
+    async function sendMessage(event) {
+      event.preventDefault();
+      const queryInput = document.getElementById("query");
+      const messagesDiv = document.getElementById("messages");
+
+      const userMessage = queryInput.value.trim();
+      if (!userMessage) {
+        alert("Please type a question!");
+        return;
+      }
+
+      // Add user message to chat
+      const userMsgDiv = document.createElement("div");
+      userMsgDiv.className = "message user";
+      userMsgDiv.textContent = `You: ${userMessage}`;
+      messagesDiv.appendChild(userMsgDiv);
+
+      // Clear the input field
+      queryInput.value = "";
+
+      // Add a "loading" message
+      const botMsgDiv = document.createElement("div");
+      botMsgDiv.className = "message bot";
+      botMsgDiv.textContent = "Assistant: Thinking...";
+      messagesDiv.appendChild(botMsgDiv);
+
+      // Scroll to the bottom
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      try {
+        // Make a POST request to the /ask endpoint
+        const response = await fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: userMessage }),
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          botMsgDiv.textContent = `Assistant: Error - ${data.error}`;
+        } else {
+          botMsgDiv.textContent = `Assistant: ${data.answer}`;
+        }
+      } catch (err) {
+        botMsgDiv.textContent = `Assistant: Error - ${err.message}`;
+      }
+    }
+
+    async function uploadFile(event) {
+      event.preventDefault();
+      const fileInput = document.getElementById("file");
+      const responseDiv = document.getElementById("upload-response");
+
+      if (!fileInput.files[0]) {
+        responseDiv.innerHTML = "<p>Please select a file to upload!</p>";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      responseDiv.innerHTML = "<p>Uploading...</p>";
+
+      try {
+        const response = await fetch("/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json();
+        if (data.error) {
+          responseDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+        } else {
+          responseDiv.innerHTML = `<p style="color:green;">${data.message}</p>`;
+        }
+      } catch (err) {
+        responseDiv.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Teaching Assistant</h1>
+
+  <!-- Chat Interface -->
+  <div id="chat-container">
+    <h3>Ask a Question</h3>
+    <div id="messages">
+      <!-- Chat messages will appear here -->
+    </div>
+    <form id="input-container" onsubmit="sendMessage(event)">
+      <input type="text" id="query" placeholder="Ask me anything..." required>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <!-- File Upload Interface -->
+  <div id="upload-container">
+    <h3>Upload Teaching Materials</h3>
+    <form id="upload-form" onsubmit="uploadFile(event)">
+      <input type="file" id="file" name="file" accept=".pdf">
+      <button type="submit">Upload</button>
+    </form>
+    <div id="upload-response"></div>
+  </div>
+</body>
+</html>
