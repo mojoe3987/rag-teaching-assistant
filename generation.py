@@ -3,11 +3,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def format_prompt(chunks, query):
+def format_prompt(retrieved_docs, retrieved_metas, query):
     """
-    Formats the retrieved chunks and user query into a prompt for GPT-4.
+    retrieved_docs: list of chunk_texts
+    retrieved_metas: list of chunk_metadata
     """
-    context = "\n\n".join([f"- {chunk}" for chunk in chunks])
+    # Combine them into a single string
+    context_parts = []
+    for doc_text, meta in zip(retrieved_docs, retrieved_metas):
+        session_str = f"Session {meta.get('session')}" if meta.get('session') else ""
+        slide_str = f"Slide {meta.get('slide')}" if meta.get('slide') else ""
+        context_parts.append(f"({session_str} {slide_str}) {doc_text}")
+
+    context = "\n\n".join(context_parts)
+
     return f"""
     As a university teaching assistant, please answer the following question based on the provided context.
     
